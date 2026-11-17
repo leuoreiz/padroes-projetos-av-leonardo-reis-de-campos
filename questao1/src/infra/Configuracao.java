@@ -1,102 +1,54 @@
 package infra;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Padrão Singleton - papel: SINGLETON (configuração global).
- *
- * RNF04: o arquivo config.properties é lido uma única vez, no construtor privado.
- * Todas as classes obtêm os mesmos valores por {@link #getInstancia()}, sem
- * receber a configuração por parâmetro.
- *
- * A criação é preguiçosa e thread-safe (double-checked locking com volatile):
- * mesmo que várias threads de provisionamento peçam a instância ao mesmo tempo,
- * apenas uma executa a leitura do arquivo.
- */
-public final class Configuracao {
+// Singleton - configuração global (RNF04)
+// O arquivo é lido uma única vez, no construtor privado. Qualquer classe pega
+// os mesmos valores com Configuracao.getInstancia(), sem receber por parâmetro.
+public class Configuracao {
 
-    private static final String ARQUIVO = "config.properties";
+    private static Configuracao instancia;
 
-    private static volatile Configuracao instancia;
-
-    /** Apenas para evidenciar, ao final da execução, que a leitura ocorreu uma única vez. */
-    private static final AtomicInteger LEITURAS_DO_ARQUIVO = new AtomicInteger();
-
-    private final String regiaoPadrao;
-    private final BigDecimal orcamentoMensalMaximo;
+    private String regiaoPadrao;
+    private double orcamentoMaximo;
 
     private Configuracao() {
-        Properties propriedades = lerArquivo();
-        this.regiaoPadrao = obrigatoria(propriedades, "regiao.padrao");
-        this.orcamentoMensalMaximo = new BigDecimal(obrigatoria(propriedades, "orcamento.mensal.maximo"));
-        LEITURAS_DO_ARQUIVO.incrementAndGet();
-        System.out.println("[Configuracao] " + ARQUIVO + " lido pela thread "
-                + Thread.currentThread().getName()
-                + " (regiao=" + regiaoPadrao + ", orcamento=" + orcamentoMensalMaximo + ")");
+        Properties propriedades = new Properties();
+        try (FileInputStream arquivo = new FileInputStream(localizarArquivo())) {
+            propriedades.load(arquivo);
+        } catch (IOException e) {
+            throw new RuntimeException("Nao foi possivel ler o config.properties", e);
+        }
+        regiaoPadrao = propriedades.getProperty("regiao.padrao");
+        orcamentoMaximo = Double.parseDouble(propriedades.getProperty("orcamento.mensal.maximo"));
+        System.out.println("[Configuracao] config.properties lido (acontece uma unica vez)");
     }
 
-    public static Configuracao getInstancia() {
-        Configuracao local = instancia;
-        if (local == null) {
-            synchronized (Configuracao.class) {
-                local = instancia;
-                if (local == null) {
-                    local = new Configuracao();
-                    instancia = local;
-                }
-            }
+    // synchronized: se duas threads chamarem ao mesmo tempo, só uma cria a instância
+    public static synchronized Configuracao getInstancia() {
+        if (instancia == null) {
+            instancia = new Configuracao();
         }
-        return local;
+        return instancia;
+    }
+
+    // Funciona rodando de dentro de src/ ou da pasta questao1/
+    private static File localizarArquivo() {
+        File arquivo = new File("config.properties");
+        if (!arquivo.exists()) {
+            arquivo = new File("src/config.properties");
+        }
+        return arquivo;
     }
 
     public String getRegiaoPadrao() {
         return regiaoPadrao;
     }
 
-    public BigDecimal getOrcamentoMensalMaximo() {
-        return orcamentoMensalMaximo;
-    }
-
-    public static int getQuantidadeLeiturasDoArquivo() {
-        return LEITURAS_DO_ARQUIVO.get();
-    }
-
-    private static Properties lerArquivo() {
-        Properties propriedades = new Properties();
-        try (InputStream entrada = abrirArquivo()) {
-            propriedades.load(entrada);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Nao foi possivel ler " + ARQUIVO, e);
-        }
-        return propriedades;
-    }
-
-    /** Procura o arquivo no classpath, depois no diretório atual e, por fim, em src/. */
-    private static InputStream abrirArquivo() throws IOException {
-        InputStream doClasspath = Configuracao.class.getClassLoader().getResourceAsStream(ARQUIVO);
-        if (doClasspath != null) {
-            return doClasspath;
-        }
-        Path noDiretorioAtual = Paths.get(ARQUIVO);
-        if (Files.exists(noDiretorioAtual)) {
-            return Files.newInputStream(noDiretorioAtual);
-        }
-        return Files.newInputStream(Paths.get("src", ARQUIVO));
-    }
-
-    private static String obrigatoria(Properties propriedades, String chave) {
-        String valor = propriedades.getProperty(chave);
-        if (valor == null || valor.trim().isEmpty()) {
-            throw new IllegalStateException("Chave obrigatoria ausente em " + ARQUIVO + ": " + chave);
-        }
-        return valor.trim();
+    public double getOrcamentoMaximo() {
+        return orcamentoMaximo;
     }
 }

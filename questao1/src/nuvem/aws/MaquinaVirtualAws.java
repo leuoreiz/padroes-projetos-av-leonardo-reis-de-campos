@@ -1,25 +1,24 @@
 package nuvem.aws;
 
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import nuvem.MaquinaVirtual;
 
-/**
- * Padrão Abstract Factory - papel: PRODUTO CONCRETO (máquina virtual Aws).
- * Classe e construtor package-private: só a FabricaAws instancia (RNF06).
- */
-final class MaquinaVirtualAws implements MaquinaVirtual {
+// Abstract Factory - PRODUTO CONCRETO (máquina virtual Aws)
+class MaquinaVirtualAws implements MaquinaVirtual {
 
-    static final BigDecimal CUSTO_POR_HORA = new BigDecimal("0.10");
+    static final double CUSTO_POR_HORA = 0.10;
 
-    /** Sequência por tipo de recurso (RF03); atômica porque há provisionamentos simultâneos. */
-    private static final AtomicInteger SEQUENCIA = new AtomicInteger();
+    private static int contador = 0;
 
-    private final String id;
+    private String id;
 
     MaquinaVirtualAws() {
-        this.id = "i-" + SEQUENCIA.incrementAndGet();
+        id = "i-" + proximoNumero();
+    }
+
+    // synchronized: duas threads ao mesmo tempo não recebem o mesmo número (RF03)
+    private static synchronized int proximoNumero() {
+        contador++;
+        return contador;
     }
 
     @Override
@@ -28,7 +27,7 @@ final class MaquinaVirtualAws implements MaquinaVirtual {
     }
 
     @Override
-    public BigDecimal getCustoPorHora() {
+    public double getCustoPorHora() {
         return CUSTO_POR_HORA;
     }
 }

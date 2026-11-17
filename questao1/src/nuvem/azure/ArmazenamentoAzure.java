@@ -1,26 +1,25 @@
 package nuvem.azure;
 
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import nuvem.Armazenamento;
 
-/**
- * Padrão Abstract Factory - papel: PRODUTO CONCRETO (armazenamento Azure).
- * Classe e construtor package-private: só a FabricaAzure instancia (RNF06).
- */
-final class ArmazenamentoAzure implements Armazenamento {
+// Abstract Factory - PRODUTO CONCRETO (armazenamento Azure)
+class ArmazenamentoAzure implements Armazenamento {
 
-    static final BigDecimal CUSTO_POR_GB_MES = new BigDecimal("0.02");
+    static final double CUSTO_POR_GB = 0.02;
 
-    private static final AtomicInteger SEQUENCIA = new AtomicInteger();
+    private static int contador = 0;
 
-    private final String id;
-    private final int gb;
+    private String id;
+    private int gb;
 
     ArmazenamentoAzure(int gb) {
-        this.id = "blob://" + SEQUENCIA.incrementAndGet();
+        this.id = "blob://" + proximoNumero();
         this.gb = gb;
+    }
+
+    private static synchronized int proximoNumero() {
+        contador++;
+        return contador;
     }
 
     @Override
@@ -34,7 +33,7 @@ final class ArmazenamentoAzure implements Armazenamento {
     }
 
     @Override
-    public BigDecimal getCustoPorGbMes() {
-        return CUSTO_POR_GB_MES;
+    public double getCustoPorGb() {
+        return CUSTO_POR_GB;
     }
 }

@@ -4,7 +4,6 @@ title Questao 1 - Provisionamento Multinuvem\nAbstract Factory (RNF01, RNF02, RN
 skinparam classAttributeIconSize 0
 skinparam shadowing false
 skinparam packageStyle rectangle
-skinparam stereotypeCBackgroundColor #FFFFFF
 skinparam class {
   BackgroundColor<<AbstractFactory>> #DCEBFF
   BackgroundColor<<ConcreteFactory>> #EEF5FF
@@ -25,33 +24,31 @@ package nuvem {
 
   interface MaquinaVirtual <<AbstractProduct>> {
     + getId() : String
-    + getCustoPorHora() : BigDecimal
+    + getCustoPorHora() : double
   }
 
   interface Armazenamento <<AbstractProduct>> {
     + getId() : String
     + getGb() : int
-    + getCustoPorGbMes() : BigDecimal
+    + getCustoPorGb() : double
   }
 
   interface FilaMensagens <<AbstractProduct>> {
     + getId() : String
-    + getCustoFixoMensal() : BigDecimal
+    + getCustoMensal() : double
   }
 
-  class TabelaPrecos <<final>> {
-    + {static} HORAS_POR_MES : BigDecimal = 730
-    - custoHoraMaquina : BigDecimal
-    - custoGbMes : BigDecimal
-    - custoFixoFila : BigDecimal
-    + TabelaPrecos(custoHoraMaquina, custoGbMes, custoFixoFila)
-    + estimarCustoMensal(quantidadeMaquinas : int, gbArmazenamento : int) : BigDecimal
+  class TabelaPrecos {
+    - custoHoraMaquina : double
+    - custoGbMes : double
+    - custoFila : double
+    + TabelaPrecos(custoHoraMaquina : double, custoGbMes : double, custoFila : double)
+    + estimarCustoMensal(quantidadeMaquinas : int, gb : int) : double
   }
 }
 
 package nuvem.aws {
   class FabricaAws <<ConcreteFactory>> {
-    - {static} PRECOS : TabelaPrecos
     + getNomeProvedor() : String
     + getTabelaPrecos() : TabelaPrecos
     + criarMaquinaVirtual() : MaquinaVirtual
@@ -59,29 +56,31 @@ package nuvem.aws {
     + criarFila() : FilaMensagens
   }
   class MaquinaVirtualAws <<ConcreteProduct>> {
-    ~ {static} CUSTO_POR_HORA : BigDecimal = 0,10
-    - {static} SEQUENCIA : AtomicInteger
-    - id : String = "i-" + n
+    ~ {static} CUSTO_POR_HORA : double = 0.10
+    - {static} contador : int
+    - id : String = "i-" + numero
     ~ MaquinaVirtualAws()
+    - {static} <<synchronized>> proximoNumero() : int
   }
   class ArmazenamentoAws <<ConcreteProduct>> {
-    ~ {static} CUSTO_POR_GB_MES : BigDecimal = 0,023
-    - {static} SEQUENCIA : AtomicInteger
-    - id : String = "s3://" + n
+    ~ {static} CUSTO_POR_GB : double = 0.023
+    - {static} contador : int
+    - id : String = "s3://" + numero
     - gb : int
     ~ ArmazenamentoAws(gb : int)
+    - {static} <<synchronized>> proximoNumero() : int
   }
   class FilaAws <<ConcreteProduct>> {
-    ~ {static} CUSTO_FIXO_MENSAL : BigDecimal = 0,40
-    - {static} SEQUENCIA : AtomicInteger
-    - id : String = "sqs-" + n
+    ~ {static} CUSTO_MENSAL : double = 0.40
+    - {static} contador : int
+    - id : String = "sqs-" + numero
     ~ FilaAws()
+    - {static} <<synchronized>> proximoNumero() : int
   }
 }
 
 package nuvem.azure {
   class FabricaAzure <<ConcreteFactory>> {
-    - {static} PRECOS : TabelaPrecos
     + getNomeProvedor() : String
     + getTabelaPrecos() : TabelaPrecos
     + criarMaquinaVirtual() : MaquinaVirtual
@@ -89,90 +88,77 @@ package nuvem.azure {
     + criarFila() : FilaMensagens
   }
   class MaquinaVirtualAzure <<ConcreteProduct>> {
-    ~ {static} CUSTO_POR_HORA : BigDecimal = 0,12
-    - {static} SEQUENCIA : AtomicInteger
-    - id : String = "vm-" + n
+    ~ {static} CUSTO_POR_HORA : double = 0.12
+    - {static} contador : int
+    - id : String = "vm-" + numero
     ~ MaquinaVirtualAzure()
+    - {static} <<synchronized>> proximoNumero() : int
   }
   class ArmazenamentoAzure <<ConcreteProduct>> {
-    ~ {static} CUSTO_POR_GB_MES : BigDecimal = 0,02
-    - {static} SEQUENCIA : AtomicInteger
-    - id : String = "blob://" + n
+    ~ {static} CUSTO_POR_GB : double = 0.02
+    - {static} contador : int
+    - id : String = "blob://" + numero
     - gb : int
     ~ ArmazenamentoAzure(gb : int)
+    - {static} <<synchronized>> proximoNumero() : int
   }
   class FilaAzure <<ConcreteProduct>> {
-    ~ {static} CUSTO_FIXO_MENSAL : BigDecimal = 0,50
-    - {static} SEQUENCIA : AtomicInteger
-    - id : String = "sb-" + n
+    ~ {static} CUSTO_MENSAL : double = 0.50
+    - {static} contador : int
+    - id : String = "sb-" + numero
     ~ FilaAzure()
+    - {static} <<synchronized>> proximoNumero() : int
   }
 }
 
 package provisionamento {
   class ProvisionadorAmbiente <<Client>> {
-    + provisionar(solicitacao : SolicitacaoAmbiente) : Optional<Ambiente>
+    + provisionar(solicitacao : SolicitacaoAmbiente) : void
   }
-  class SolicitacaoAmbiente <<final>> {
+  class SolicitacaoAmbiente {
     - nomeAmbiente : String
-    - provedor : FabricaNuvem
     - quantidadeMaquinas : int
     - gbArmazenamento : int
-    + SolicitacaoAmbiente(nome, provedor, quantidadeMaquinas, gbArmazenamento)
+    + getProvedor() : FabricaNuvem
   }
-  class Ambiente <<final>> {
+  class Ambiente {
     - nome : String
     - provedor : String
     - regiao : String
-    - custoMensalEstimado : BigDecimal
-    ~ Ambiente(...)
-    + resumo() : String
+    - custoMensal : double
+    + imprimirResumo() : void
   }
 }
 
 package infra {
   class Configuracao <<Singleton>> {
-    - {static} ARQUIVO : String = "config.properties"
-    - {static} instancia : Configuracao <<volatile>>
-    - {static} LEITURAS_DO_ARQUIVO : AtomicInteger
+    - {static} instancia : Configuracao
     - regiaoPadrao : String
-    - orcamentoMensalMaximo : BigDecimal
+    - orcamentoMaximo : double
     - Configuracao()
-    + {static} getInstancia() : Configuracao
+    + {static} <<synchronized>> getInstancia() : Configuracao
+    - {static} localizarArquivo() : File
     + getRegiaoPadrao() : String
-    + getOrcamentoMensalMaximo() : BigDecimal
-    + {static} getQuantidadeLeiturasDoArquivo() : int
+    + getOrcamentoMaximo() : double
   }
   class HistoricoAuditoria <<Singleton>> {
-    - {static} instancia : HistoricoAuditoria <<volatile>>
+    - {static} instancia : HistoricoAuditoria
     - registros : List<RegistroAuditoria>
     - HistoricoAuditoria()
-    + {static} getInstancia() : HistoricoAuditoria
-    + <<synchronized>> registrar(ambiente, provedor, resultado, motivo) : RegistroAuditoria
-    + <<synchronized>> getRegistros() : List<RegistroAuditoria>
-    + imprimir() : void
+    + {static} <<synchronized>> getInstancia() : HistoricoAuditoria
+    + <<synchronized>> registrar(ambiente : String, provedor : String, resultado : String) : void
+    + <<synchronized>> imprimir() : void
   }
-  class RegistroAuditoria <<final>> {
-    - sequencia : int
+  class RegistroAuditoria {
     - dataHora : LocalDateTime
-    - nomeAmbiente : String
+    - ambiente : String
     - provedor : String
-    - motivo : String
+    - resultado : String
     + toString() : String
   }
-  enum ResultadoProvisionamento {
-    ACEITO
-    RECUSADO
-  }
 }
 
-package util {
-  class Moeda <<final>> {
-    + {static} formatar(valor : BigDecimal) : String
-  }
-}
-
-class Main <<escolhe o provedor>> {
+class Main {
   + {static} main(args : String[]) : void
 }
 
@@ -194,11 +180,9 @@ FabricaNuvem ..> TabelaPrecos
 FabricaAws ..> MaquinaVirtualAws : <<create>>
 FabricaAws ..> ArmazenamentoAws : <<create>>
 FabricaAws ..> FilaAws : <<create>>
-FabricaAws --> "1" TabelaPrecos : PRECOS
 FabricaAzure ..> MaquinaVirtualAzure : <<create>>
 FabricaAzure ..> ArmazenamentoAzure : <<create>>
 FabricaAzure ..> FilaAzure : <<create>>
-FabricaAzure --> "1" TabelaPrecos : PRECOS
 
 ' ---------------- Cliente ----------------
 SolicitacaoAmbiente --> "1" FabricaNuvem : provedor
@@ -208,14 +192,11 @@ ProvisionadorAmbiente ..> Ambiente : <<create>>
 Ambiente o--> "1..*" MaquinaVirtual : maquinas
 Ambiente o--> "1" Armazenamento : armazenamento
 Ambiente o--> "1" FilaMensagens : fila
-Ambiente ..> Moeda
-ProvisionadorAmbiente ..> Moeda
 
 ' ---------------- Singleton ----------------
 Configuracao --> "1" Configuracao : instancia
 HistoricoAuditoria --> "1" HistoricoAuditoria : instancia
 HistoricoAuditoria "1" *--> "*" RegistroAuditoria : registros
-RegistroAuditoria --> "1" ResultadoProvisionamento : resultado
 ProvisionadorAmbiente ..> Configuracao : getInstancia()
 ProvisionadorAmbiente ..> HistoricoAuditoria : getInstancia()
 
@@ -223,9 +204,8 @@ ProvisionadorAmbiente ..> HistoricoAuditoria : getInstancia()
 Main ..> FabricaAws : <<create>>
 Main ..> FabricaAzure : <<create>>
 Main ..> SolicitacaoAmbiente : <<create>>
-Main ..> ProvisionadorAmbiente : 4 threads simultaneas
+Main ..> ProvisionadorAmbiente : 4 threads
 Main ..> HistoricoAuditoria : imprimir()
-Main ..> Configuracao
 
 note top of FabricaNuvem
   <b>Abstract Factory</b>: uma unica fabrica cria os tres
@@ -235,19 +215,18 @@ note top of FabricaNuvem
 end note
 
 note bottom of MaquinaVirtualAws
-  Produtos concretos sao package-private:
-  so a fabrica do proprio pacote consegue
-  instancia-los (RNF06).
+  Produtos concretos nao sao public:
+  so a fabrica do proprio pacote
+  consegue dar new neles (RNF06).
 end note
 
 note right of Configuracao
-  <b>Singleton</b> thread-safe (double-checked locking
-  + volatile). Le config.properties uma unica vez (RNF04).
+  <b>Singleton</b>: construtor privado e getInstancia()
+  synchronized. Le o config.properties uma vez so (RNF04).
 end note
 
 note right of HistoricoAuditoria
-  <b>Singleton</b> com registrar()/getRegistros()
-  synchronized: registros simultaneos nao se
-  perdem nem se sobrescrevem (RNF05).
+  <b>Singleton</b>: registrar() synchronized, entao
+  registros simultaneos nao se perdem (RNF05).
 end note
 @enduml

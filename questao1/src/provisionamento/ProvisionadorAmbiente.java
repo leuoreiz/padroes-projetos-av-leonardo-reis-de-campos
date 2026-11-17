@@ -1,53 +1,42 @@
 package provisionamento;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import infra.Configuracao;
 import infra.HistoricoAuditoria;
-import infra.ResultadoProvisionamento;
 import nuvem.Armazenamento;
 import nuvem.FabricaNuvem;
 import nuvem.FilaMensagens;
 import nuvem.MaquinaVirtual;
-import util.Moeda;
 
-/**
- * Padrão Abstract Factory - papel: CLIENTE.
- *
- * Monta o ambiente usando apenas a fábrica abstrata e os produtos abstratos:
- * não conhece nenhuma classe concreta de provedor e não tem if/switch para
- * decidir o provedor (RNF02). Os três recursos vêm sempre da mesma fábrica (RNF01).
- *
- * Configuração e auditoria são obtidas pelos Singletons, sem parâmetros (RNF04/RNF05).
- * A classe não tem estado, então pode ser usada por várias threads ao mesmo tempo.
- */
+// Abstract Factory - CLIENTE
+// Monta o ambiente usando só a fábrica abstrata (FabricaNuvem). Não conhece
+// FabricaAws nem FabricaAzure e não tem if/switch de provedor (RNF02).
 public class ProvisionadorAmbiente {
 
-    public Optional<Ambiente> provisionar(SolicitacaoAmbiente solicitacao) {
+    public void provisionar(SolicitacaoAmbiente solicitacao) {
         FabricaNuvem fabrica = solicitacao.getProvedor();
-        Configuracao configuracao = Configuracao.getInstancia();
-        HistoricoAuditoria historico = HistoricoAuditoria.getInstancia();
-
         String nome = solicitacao.getNomeAmbiente();
         String provedor = fabrica.getNomeProvedor();
 
-        // RF04/RF05: o custo é estimado antes de criar qualquer recurso.
-        BigDecimal custoEstimado = fabrica.getTabelaPrecos()
-                .estimarCustoMensal(solicitacao.getQuantidadeMaquinas(), solicitacao.getGbArmazenamento());
-        BigDecimal orcamento = configuracao.getOrcamentoMensalMaximo();
+        // Singletons: ninguém passou a configuração nem o histórico por parâmetro
+        Configuracao configuracao = Configuracao.getInstancia();
+        HistoricoAuditoria historico = HistoricoAuditoria.getInstancia();
 
-        if (custoEstimado.compareTo(orcamento) > 0) {
-            String motivo = "custo estimado de " + Moeda.formatar(custoEstimado)
-                    + " ultrapassa o orcamento mensal de " + Moeda.formatar(orcamento);
-            historico.registrar(nome, provedor, ResultadoProvisionamento.RECUSADO, motivo);
-            System.out.println("[RECUSADO] Ambiente " + nome + " (" + provedor + "): " + motivo
-                    + ". Nenhum recurso foi criado.");
-            return Optional.empty();
+        // RF05: estima o custo antes de criar qualquer recurso
+        double custo = fabrica.getTabelaPrecos()
+                .estimarCustoMensal(solicitacao.getQuantidadeMaquinas(), solicitacao.getGbArmazenamento());
+
+        if (custo > configuracao.getOrcamentoMaximo()) {
+            String motivo = String.format("custo estimado de R$ %.2f passa do orcamento de R$ %.2f",
+                    custo, configuracao.getOrcamentoMaximo());
+            historico.registrar(nome, provedor, "RECUSADO (" + motivo + ")");
+            System.out.println("[RECUSADO] " + nome + ": " + motivo + ". Nenhum recurso foi criado.");
+            return;
         }
 
+        // Os três recursos vêm da MESMA fábrica, então são do mesmo provedor (RNF01)
         List<MaquinaVirtual> maquinas = new ArrayList<>();
         for (int i = 0; i < solicitacao.getQuantidadeMaquinas(); i++) {
             maquinas.add(fabrica.criarMaquinaVirtual());
@@ -56,11 +45,9 @@ public class ProvisionadorAmbiente {
         FilaMensagens fila = fabrica.criarFila();
 
         Ambiente ambiente = new Ambiente(nome, provedor, configuracao.getRegiaoPadrao(),
-                maquinas, armazenamento, fila, custoEstimado);
+                maquinas, armazenamento, fila, custo);
 
-        historico.registrar(nome, provedor, ResultadoProvisionamento.ACEITO, null);
-        // Um único println por resumo, para que as linhas de threads diferentes não se misturem.
-        System.out.println(ambiente.resumo());
-        return Optional.of(ambiente);
+        historico.registrar(nome, provedor, "ACEITO");
+        ambiente.imprimirResumo();
     }
 }

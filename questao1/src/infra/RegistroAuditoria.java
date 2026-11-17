@@ -3,56 +3,25 @@ package infra;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/** Registro imutável de um provisionamento, aceito ou recusado (RF07). */
-public final class RegistroAuditoria {
+// Um registro de auditoria: data e hora, ambiente, provedor e resultado (RF07)
+public class RegistroAuditoria {
 
-    private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss.SSS");
+    private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
-    private final int sequencia;
-    private final LocalDateTime dataHora;
-    private final String nomeAmbiente;
-    private final String provedor;
-    private final ResultadoProvisionamento resultado;
-    private final String motivo;
+    private LocalDateTime dataHora;
+    private String ambiente;
+    private String provedor;
+    private String resultado;
 
-    RegistroAuditoria(int sequencia, LocalDateTime dataHora, String nomeAmbiente, String provedor,
-                      ResultadoProvisionamento resultado, String motivo) {
-        this.sequencia = sequencia;
+    public RegistroAuditoria(LocalDateTime dataHora, String ambiente, String provedor, String resultado) {
         this.dataHora = dataHora;
-        this.nomeAmbiente = nomeAmbiente;
+        this.ambiente = ambiente;
         this.provedor = provedor;
         this.resultado = resultado;
-        this.motivo = motivo;
-    }
-
-    public int getSequencia() {
-        return sequencia;
-    }
-
-    public LocalDateTime getDataHora() {
-        return dataHora;
-    }
-
-    public String getNomeAmbiente() {
-        return nomeAmbiente;
-    }
-
-    public String getProvedor() {
-        return provedor;
-    }
-
-    public ResultadoProvisionamento getResultado() {
-        return resultado;
-    }
-
-    public String getMotivo() {
-        return motivo;
     }
 
     @Override
     public String toString() {
-        String texto = "#" + sequencia + " | " + FORMATO.format(dataHora) + " | " + nomeAmbiente
-                + " | " + provedor + " | " + resultado;
-        return motivo == null ? texto : texto + " (motivo: " + motivo + ")";
+        return dataHora.format(FORMATO) + " | " + ambiente + " | " + provedor + " | " + resultado;
     }
 }

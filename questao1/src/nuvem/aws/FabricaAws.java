@@ -6,19 +6,10 @@ import nuvem.FilaMensagens;
 import nuvem.MaquinaVirtual;
 import nuvem.TabelaPrecos;
 
-/**
- * Padrão Abstract Factory - papel: FÁBRICA CONCRETA (Aws).
- *
- * Cria a família de recursos do provedor Aws. As classes dos recursos Aws
- * são package-private: fora deste pacote ninguém consegue instanciá-las (RNF06),
- * apenas esta fábrica.
- */
+// Abstract Factory - FÁBRICA CONCRETA (Aws)
+// As classes dos recursos Aws não são public: fora deste pacote ninguém consegue
+// dar new nelas, só esta fábrica (RNF06).
 public class FabricaAws implements FabricaNuvem {
-
-    private static final TabelaPrecos PRECOS = new TabelaPrecos(
-            MaquinaVirtualAws.CUSTO_POR_HORA,
-            ArmazenamentoAws.CUSTO_POR_GB_MES,
-            FilaAws.CUSTO_FIXO_MENSAL);
 
     @Override
     public String getNomeProvedor() {
@@ -27,7 +18,7 @@ public class FabricaAws implements FabricaNuvem {
 
     @Override
     public TabelaPrecos getTabelaPrecos() {
-        return PRECOS;
+        return new TabelaPrecos(MaquinaVirtualAws.CUSTO_POR_HORA, ArmazenamentoAws.CUSTO_POR_GB, FilaAws.CUSTO_MENSAL);
     }
 
     @Override

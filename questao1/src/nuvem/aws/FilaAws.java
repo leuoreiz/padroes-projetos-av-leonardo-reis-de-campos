@@ -1,24 +1,23 @@
 package nuvem.aws;
 
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import nuvem.FilaMensagens;
 
-/**
- * Padrão Abstract Factory - papel: PRODUTO CONCRETO (fila de mensagens Aws).
- * Classe e construtor package-private: só a FabricaAws instancia (RNF06).
- */
-final class FilaAws implements FilaMensagens {
+// Abstract Factory - PRODUTO CONCRETO (fila de mensagens Aws)
+class FilaAws implements FilaMensagens {
 
-    static final BigDecimal CUSTO_FIXO_MENSAL = new BigDecimal("0.40");
+    static final double CUSTO_MENSAL = 0.40;
 
-    private static final AtomicInteger SEQUENCIA = new AtomicInteger();
+    private static int contador = 0;
 
-    private final String id;
+    private String id;
 
     FilaAws() {
-        this.id = "sqs-" + SEQUENCIA.incrementAndGet();
+        id = "sqs-" + proximoNumero();
+    }
+
+    private static synchronized int proximoNumero() {
+        contador++;
+        return contador;
     }
 
     @Override
@@ -27,7 +26,7 @@ final class FilaAws implements FilaMensagens {
     }
 
     @Override
-    public BigDecimal getCustoFixoMensal() {
-        return CUSTO_FIXO_MENSAL;
+    public double getCustoMensal() {
+        return CUSTO_MENSAL;
     }
 }

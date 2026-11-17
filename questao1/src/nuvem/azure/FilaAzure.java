@@ -1,24 +1,23 @@
 package nuvem.azure;
 
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import nuvem.FilaMensagens;
 
-/**
- * Padrão Abstract Factory - papel: PRODUTO CONCRETO (fila de mensagens Azure).
- * Classe e construtor package-private: só a FabricaAzure instancia (RNF06).
- */
-final class FilaAzure implements FilaMensagens {
+// Abstract Factory - PRODUTO CONCRETO (fila de mensagens Azure)
+class FilaAzure implements FilaMensagens {
 
-    static final BigDecimal CUSTO_FIXO_MENSAL = new BigDecimal("0.50");
+    static final double CUSTO_MENSAL = 0.50;
 
-    private static final AtomicInteger SEQUENCIA = new AtomicInteger();
+    private static int contador = 0;
 
-    private final String id;
+    private String id;
 
     FilaAzure() {
-        this.id = "sb-" + SEQUENCIA.incrementAndGet();
+        id = "sb-" + proximoNumero();
+    }
+
+    private static synchronized int proximoNumero() {
+        contador++;
+        return contador;
     }
 
     @Override
@@ -27,7 +26,7 @@ final class FilaAzure implements FilaMensagens {
     }
 
     @Override
-    public BigDecimal getCustoFixoMensal() {
-        return CUSTO_FIXO_MENSAL;
+    public double getCustoMensal() {
+        return CUSTO_MENSAL;
     }
 }

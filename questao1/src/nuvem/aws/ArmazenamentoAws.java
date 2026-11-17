@@ -1,26 +1,25 @@
 package nuvem.aws;
 
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import nuvem.Armazenamento;
 
-/**
- * Padrão Abstract Factory - papel: PRODUTO CONCRETO (armazenamento Aws).
- * Classe e construtor package-private: só a FabricaAws instancia (RNF06).
- */
-final class ArmazenamentoAws implements Armazenamento {
+// Abstract Factory - PRODUTO CONCRETO (armazenamento Aws)
+class ArmazenamentoAws implements Armazenamento {
 
-    static final BigDecimal CUSTO_POR_GB_MES = new BigDecimal("0.023");
+    static final double CUSTO_POR_GB = 0.023;
 
-    private static final AtomicInteger SEQUENCIA = new AtomicInteger();
+    private static int contador = 0;
 
-    private final String id;
-    private final int gb;
+    private String id;
+    private int gb;
 
     ArmazenamentoAws(int gb) {
-        this.id = "s3://" + SEQUENCIA.incrementAndGet();
+        this.id = "s3://" + proximoNumero();
         this.gb = gb;
+    }
+
+    private static synchronized int proximoNumero() {
+        contador++;
+        return contador;
     }
 
     @Override
@@ -34,7 +33,7 @@ final class ArmazenamentoAws implements Armazenamento {
     }
 
     @Override
-    public BigDecimal getCustoPorGbMes() {
-        return CUSTO_POR_GB_MES;
+    public double getCustoPorGb() {
+        return CUSTO_POR_GB;
     }
 }
