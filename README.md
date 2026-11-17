@@ -15,7 +15,7 @@ Na questão 1, o `config.properties` fica em `questao1/src/`.
 
 ## Questão 1: Provisionamento Multinuvem
 
-Diagrama: [`questao1/diagrama/questao1.puml`](questao1/diagrama/questao1.puml)
+![Diagrama de classes da Questão 1](questao1/diagrama/questao1.png)
 
 | Requisito | Padrão | Onde |
 |---|---|---|
@@ -27,7 +27,7 @@ O custo é estimado pela `TabelaPrecos` da fábrica antes de criar os recursos, 
 
 ## Questão 2: Casa de Leilões Online
 
-Diagrama: [`questao2/diagrama/questao2.puml`](questao2/diagrama/questao2.puml)
+![Diagrama de classes da Questão 2](questao2/diagrama/questao2.png)
 
 | Requisito | Padrão | Onde |
 |---|---|---|
