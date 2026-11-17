@@ -1,47 +1,18 @@
 package servicos;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Objects;
-
-/**
- * Padrão Decorator - papel: DECORADOR ABSTRATO (Decorator).
- *
- * É uma Compra e envolve outra Compra, repassando as chamadas para ela.
- * Os decoradores concretos acrescentam a sua linha e o seu custo. Assim os
- * serviços se combinam em qualquer ordem e quantidade, sem classes de
- * combinações prontas (RNF03).
- */
+// Decorator - DECORADOR ABSTRATO: é uma Compra e guarda a Compra que ele envolve.
+// Os serviços se combinam em qualquer ordem e quantidade, sem precisar de
+// classes prontas como SeguroComEmbalagem (RNF03).
 public abstract class ServicoAdicional implements Compra {
 
-    protected final Compra compra;
+    protected Compra compra;
 
-    protected ServicoAdicional(Compra compra) {
-        this.compra = Objects.requireNonNull(compra, "compra");
+    public ServicoAdicional(Compra compra) {
+        this.compra = compra;
     }
 
     @Override
-    public String getNomeLote() {
-        return compra.getNomeLote();
-    }
-
-    @Override
-    public String getComprador() {
-        return compra.getComprador();
-    }
-
-    @Override
-    public BigDecimal getValorVenda() {
+    public double getValorVenda() {
         return compra.getValorVenda();
-    }
-
-    @Override
-    public List<ItemFatura> getServicos() {
-        return compra.getServicos();
-    }
-
-    @Override
-    public BigDecimal getTotal() {
-        return compra.getTotal();
     }
 }

@@ -1,51 +1,30 @@
 package servicos;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-
 import leilao.Lote;
 
-/**
- * Padrão Decorator - papel: COMPONENTE CONCRETO.
- *
- * A compra "pura" de um lote vendido, sem nenhum serviço adicional.
- * Só pode ser criada para um lote vendido (Lote.getValorVenda() falha caso contrário).
- */
+// Decorator - COMPONENTE CONCRETO: a compra do lote, sem nenhum serviço
 public class CompraLote implements Compra {
 
-    private final String nomeLote;
-    private final String comprador;
-    private final BigDecimal valorVenda;
+    private Lote lote;
 
     public CompraLote(Lote lote) {
-        this.valorVenda = lote.getValorVenda();
-        this.comprador = lote.getComprador().getNome();
-        this.nomeLote = lote.getNome();
+        this.lote = lote;
     }
 
     @Override
-    public String getNomeLote() {
-        return nomeLote;
+    public String getDescricao() {
+        return "Lote: " + lote.getNome() + "\n"
+                + "Comprador: " + lote.getComprador().getNome() + "\n"
+                + String.format("Valor de venda: R$ %.2f", lote.getValorVenda());
     }
 
     @Override
-    public String getComprador() {
-        return comprador;
+    public double getValorVenda() {
+        return lote.getValorVenda();
     }
 
     @Override
-    public BigDecimal getValorVenda() {
-        return valorVenda;
-    }
-
-    @Override
-    public List<ItemFatura> getServicos() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    public BigDecimal getTotal() {
-        return valorVenda;
+    public double getTotal() {
+        return lote.getValorVenda();
     }
 }

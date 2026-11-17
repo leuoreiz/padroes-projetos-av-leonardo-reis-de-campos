@@ -1,30 +1,21 @@
 package leilao;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+// Lance aceito: quem deu e o valor (RF02)
+public class Lance {
 
-/** Lance aceito em um lote: quem deu, o valor e quando (RF02). */
-public final class Lance {
+    private Licitante licitante;
+    private double valor;
 
-    private final Licitante licitante;
-    private final BigDecimal valor;
-    private final LocalDateTime dataHora;
-
-    Lance(Licitante licitante, BigDecimal valor, LocalDateTime dataHora) {
+    public Lance(Licitante licitante, double valor) {
         this.licitante = licitante;
         this.valor = valor;
-        this.dataHora = dataHora;
     }
 
     public Licitante getLicitante() {
         return licitante;
     }
 
-    public BigDecimal getValor() {
+    public double getValor() {
         return valor;
-    }
-
-    public LocalDateTime getDataHora() {
-        return dataHora;
     }
 }

@@ -18,52 +18,49 @@ skinparam class {
 
 package leilao {
   class Lote <<ConcreteSubject>> <<Context>> #EEF5FF {
-    - {static} FATOR_LANCE_MINIMO : BigDecimal = 1,05
     - nome : String
-    - precoInicial : BigDecimal
-    - precoReserva : BigDecimal
-    - observadores : List<ObservadorLance>
-    - lances : List<Lance>
+    - precoInicial : double
+    - precoReserva : double
+    - lanceAtual : double
+    - encerrado : boolean
+    - vendido : boolean
+    - comissao : double
     - regraComissao : RegraComissao
-    - situacao : SituacaoLote
-    - comissaoCobrada : BigDecimal
-    + Lote(nome, categoria, precoInicial, precoReserva)
-    + adicionarObservador(o : ObservadorLance) : void
-    + removerObservador(o : ObservadorLance) : void
+    - lances : List<Lance>
+    - observadores : List<ObservadorLance>
+    + Lote(nome : String, categoria : Categoria, precoInicial : double, precoReserva : double)
+    + adicionarObservador(observador : ObservadorLance) : void
+    + removerObservador(observador : ObservadorLance) : void
     + notificarObservadores(lance : Lance) : void
-    + receberLance(licitante : Licitante, valor : BigDecimal) : boolean
-    + getLanceAtual() : BigDecimal
-    + getMaiorLance() : Lance
-    + getTotalLances() : int
+    + receberLance(licitante : Licitante, valor : double) : void
     + trocarRegraComissao(novaRegra : RegraComissao) : void
     + encerrar() : void
+    + getLanceAtual() : double
+    + getTotalLances() : int
+    + getMaiorLance() : Lance
     + getComprador() : Licitante
-    + getValorVenda() : BigDecimal
-    + getComissaoCobrada() : BigDecimal
+    + getValorVenda() : double
+    + getComissao() : double
   }
   interface Licitante {
     + getNome() : String
   }
-  class Lance <<final>> {
-    - valor : BigDecimal
-    - dataHora : LocalDateTime
+  class Lance {
+    - valor : double
     + getLicitante() : Licitante
+    + getValor() : double
   }
-  class Categoria <<final>> {
+  class Categoria {
     - nome : String
+    + getNome() : String
     + getRegraPadrao() : RegraComissao
-  }
-  enum SituacaoLote {
-    ABERTO
-    VENDIDO
-    NAO_VENDIDO
   }
 }
 
 package acompanhamento {
   interface Sujeito <<Subject>> {
-    + adicionarObservador(o : ObservadorLance) : void
-    + removerObservador(o : ObservadorLance) : void
+    + adicionarObservador(observador : ObservadorLance) : void
+    + removerObservador(observador : ObservadorLance) : void
     + notificarObservadores(lance : Lance) : void
   }
   interface ObservadorLance <<Observer>> {
@@ -73,7 +70,7 @@ package acompanhamento {
     - nome : String
     + acompanhar(lote : Lote) : void
     + deixarDeAcompanhar(lote : Lote) : void
-    + darLance(lote : Lote, valor : BigDecimal) : boolean
+    + darLance(lote : Lote, valor : double) : void
     + atualizar(lote : Lote, lance : Lance) : void
   }
   class PainelLeiloeiro <<ConcreteObserver>> {
@@ -88,66 +85,56 @@ package acompanhamento {
 
 package comissao {
   interface RegraComissao <<Strategy>> {
-    + calcular(valorVenda : BigDecimal) : BigDecimal
+    + calcular(valorVenda : double) : double
     + getDescricao() : String
   }
   class ComissaoArte <<ConcreteStrategy>> {
-    20% do valor
+    + calcular(valorVenda : double) : double
   }
   class ComissaoVeiculos <<ConcreteStrategy>> {
-    8% do valor, teto R$ 5.000,00
+    + calcular(valorVenda : double) : double
   }
   class ComissaoImoveis <<ConcreteStrategy>> {
-    3% do valor + R$ 1.500,00
+    + calcular(valorVenda : double) : double
   }
   class ComissaoEletronicos <<ConcreteStrategy>> {
-    12% do valor, minimo R$ 50,00
+    + calcular(valorVenda : double) : double
   }
 }
 
 package servicos {
   interface Compra <<Component>> {
-    + getNomeLote() : String
-    + getComprador() : String
-    + getValorVenda() : BigDecimal
-    + getServicos() : List<ItemFatura>
-    + getTotal() : BigDecimal
+    + getDescricao() : String
+    + getValorVenda() : double
+    + getTotal() : double
   }
   class CompraLote <<ConcreteComponent>> {
-    - nomeLote : String
-    - comprador : String
-    - valorVenda : BigDecimal
     + CompraLote(lote : Lote)
+    + getDescricao() : String
+    + getValorVenda() : double
+    + getTotal() : double
   }
   abstract class ServicoAdicional <<Decorator>> {
     # compra : Compra
-    # ServicoAdicional(compra : Compra)
-    + getServicos() : List<ItemFatura>
-    + getTotal() : BigDecimal
+    + ServicoAdicional(compra : Compra)
+    + getValorVenda() : double
   }
   class SeguroTransporte <<ConcreteDecorator>> {
-    1,5% do valor de venda
-    + getServicos() : List<ItemFatura>
-    + getTotal() : BigDecimal
+    - custo() : double
+    + getDescricao() : String
+    + getTotal() : double
   }
   class CertificadoAutenticidade <<ConcreteDecorator>> {
-    R$ 300,00
-    + getServicos() : List<ItemFatura>
-    + getTotal() : BigDecimal
+    + getDescricao() : String
+    + getTotal() : double
   }
   class EmbalagemEspecial <<ConcreteDecorator>> {
-    R$ 180,00
-    + getServicos() : List<ItemFatura>
-    + getTotal() : BigDecimal
+    + getDescricao() : String
+    + getTotal() : double
   }
   class EntregaExpressa <<ConcreteDecorator>> {
-    R$ 450,00
-    + getServicos() : List<ItemFatura>
-    + getTotal() : BigDecimal
-  }
-  class ItemFatura <<final>> {
-    - descricao : String
-    - custo : BigDecimal
+    + getDescricao() : String
+    + getTotal() : double
   }
 }
 
@@ -157,12 +144,6 @@ package relatorios {
   }
   class AcertoVendedor {
     + imprimir(lote : Lote) : void
-  }
-}
-
-package util {
-  class Moeda <<final>> {
-    + {static} formatar(valor : BigDecimal) : String
   }
 }
 
@@ -177,14 +158,12 @@ ObservadorLance <|.. PainelLeiloeiro
 ObservadorLance <|.. AuditorLances
 Licitante <|.. Participante
 Lote o--> "0..*" ObservadorLance : observadores
-Sujeito ..> ObservadorLance : notifica
 Lote *--> "0..*" Lance : lances
 Lance --> "1" Licitante : licitante
 Participante ..> Lote : acompanha / da lance
 
 ' ---------------- Strategy ----------------
 Lote --> "1" Categoria : categoria
-Lote --> "1" SituacaoLote
 Lote o--> "1" RegraComissao : regraComissao (trocavel)
 Categoria --> "1" RegraComissao : regraPadrao
 RegraComissao <|.. ComissaoArte
@@ -200,15 +179,11 @@ ServicoAdicional <|-- SeguroTransporte
 ServicoAdicional <|-- CertificadoAutenticidade
 ServicoAdicional <|-- EmbalagemEspecial
 ServicoAdicional <|-- EntregaExpressa
-Compra ..> ItemFatura
-CompraLote ..> Lote : le venda
+CompraLote --> "1" Lote : lote
 
 ' ---------------- Relatorios / Main ----------------
 ImpressoraFatura ..> Compra
 AcertoVendedor ..> Lote
-ImpressoraFatura ..> Moeda
-AcertoVendedor ..> Moeda
-Lote ..> Moeda
 Main ..> Lote : <<create>>
 Main ..> Categoria : <<create>>
 Main ..> Participante : <<create>>
@@ -221,22 +196,21 @@ Main ..> AcertoVendedor
 
 note top of Sujeito
   <b>Observer</b>: o Lote so conhece ObservadorLance
-  e Licitante. Cada lance aceito e enviado a todos
-  os observadores, menos a quem deu o lance.
-  Novo interessado = nova classe (RNF01).
+  e Licitante. Cada lance aceito e enviado a todos,
+  menos a quem deu o lance. Novo interessado =
+  nova classe, sem mexer no Lote (RNF01).
 end note
 
 note top of RegraComissao
-  <b>Strategy</b>: nenhuma classe faz if/switch pela
-  categoria. trocarRegraComissao() muda a regra em
-  tempo de execucao, antes do encerramento (RNF02/RF07).
+  <b>Strategy</b>: sem if/switch pela categoria.
+  trocarRegraComissao() muda a regra em tempo
+  de execucao, antes do encerramento (RNF02/RF07).
 end note
 
 note top of Compra
-  <b>Decorator</b>: cada servico envolve uma Compra
-  e soma a sua linha e o seu custo. Qualquer
-  combinacao, ordem e quantidade, sem classes
-  de combinacao (RNF03). ImpressoraFatura trata
-  qualquer Compra igual (RNF04).
+  <b>Decorator</b>: cada servico envolve uma Compra e
+  soma a sua linha e o seu custo, em qualquer ordem e
+  quantidade (RNF03). A ImpressoraFatura trata qualquer
+  Compra do mesmo jeito (RNF04).
 end note
 @enduml

@@ -2,11 +2,7 @@ package acompanhamento;
 
 import leilao.Lance;
 
-/**
- * Padrão Observer - papel: SUJEITO (Subject).
- *
- * Contrato de quem pode ser acompanhado: registrar, remover e notificar observadores.
- */
+// Observer - SUJEITO: o que pode ser acompanhado
 public interface Sujeito {
 
     void adicionarObservador(ObservadorLance observador);

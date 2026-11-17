@@ -1,26 +1,19 @@
 package servicos;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-/** Padrão Decorator - papel: DECORADOR CONCRETO. Entrega expressa: R$ 450,00 fixos. */
+// Decorator - DECORADOR CONCRETO: entrega expressa, R$ 450,00
 public class EntregaExpressa extends ServicoAdicional {
-
-    private static final BigDecimal CUSTO = new BigDecimal("450.00");
 
     public EntregaExpressa(Compra compra) {
         super(compra);
     }
 
     @Override
-    public List<ItemFatura> getServicos() {
-        List<ItemFatura> servicos = super.getServicos();
-        servicos.add(new ItemFatura("Entrega expressa", CUSTO));
-        return servicos;
+    public String getDescricao() {
+        return compra.getDescricao() + "\n  + Entrega expressa: R$ 450,00";
     }
 
     @Override
-    public BigDecimal getTotal() {
-        return super.getTotal().add(CUSTO);
+    public double getTotal() {
+        return compra.getTotal() + 450.00;
     }
 }

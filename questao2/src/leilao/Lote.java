@@ -1,64 +1,45 @@
 package leilao;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import acompanhamento.ObservadorLance;
 import acompanhamento.Sujeito;
 import comissao.RegraComissao;
-import util.Moeda;
 
-/**
- * Lote do leilão. Acumula dois papéis, sem que um dependa do outro (RNF05):
- *
- * - Observer: SUJEITO CONCRETO. Guarda a lista de observadores pela interface
- *   ObservadorLance e avisa todos a cada lance aceito, exceto quem deu o lance.
- *   Não conhece Participante, PainelLeiloeiro nem AuditorLances (RNF01).
- *
- * - Strategy: CONTEXTO. Guarda uma RegraComissao, trocável em tempo de execução
- *   antes do encerramento, sem recriar o lote (RNF02 / RF07).
- */
+// Observer - SUJEITO CONCRETO: avisa os observadores a cada lance aceito.
+//   Só conhece a interface ObservadorLance, nunca Participante, Painel ou Auditor (RNF01).
+// Strategy - CONTEXTO: guarda a regra de comissão, que pode ser trocada
+//   antes do encerramento sem recriar o lote (RNF02 / RF07).
 public class Lote implements Sujeito {
 
-    /** RF02: o novo lance precisa ser pelo menos 5% maior que o lance atual. */
-    private static final BigDecimal FATOR_LANCE_MINIMO = new BigDecimal("1.05");
-
-    private final String nome;
-    private final Categoria categoria;
-    private final BigDecimal precoInicial;
-    private final BigDecimal precoReserva;
-
-    private final List<ObservadorLance> observadores = new ArrayList<>();
-    private final List<Lance> lances = new ArrayList<>();
+    private String nome;
+    private Categoria categoria;
+    private double precoInicial;
+    private double precoReserva;
+    private double lanceAtual;
+    private boolean encerrado = false;
+    private boolean vendido = false;
+    private double comissao;
 
     private RegraComissao regraComissao;
-    private SituacaoLote situacao = SituacaoLote.ABERTO;
-    private BigDecimal comissaoCobrada;
+    private List<Lance> lances = new ArrayList<>();
+    private List<ObservadorLance> observadores = new ArrayList<>();
 
-    public Lote(String nome, Categoria categoria, BigDecimal precoInicial, BigDecimal precoReserva) {
-        if (precoInicial.signum() <= 0 || precoReserva.signum() < 0) {
-            throw new IllegalArgumentException("Precos do lote invalidos");
-        }
+    public Lote(String nome, Categoria categoria, double precoInicial, double precoReserva) {
         this.nome = nome;
         this.categoria = categoria;
         this.precoInicial = precoInicial;
         this.precoReserva = precoReserva;
-        this.regraComissao = categoria.getRegraPadrao();
+        this.lanceAtual = precoInicial;                   // RF01
+        this.regraComissao = categoria.getRegraPadrao();  // regra da categoria
     }
 
-    // ------------------------------------------------------------------
-    // Observer - operações do Sujeito (RF03)
-    // ------------------------------------------------------------------
+    // ---------- Observer ----------
 
     @Override
     public void adicionarObservador(ObservadorLance observador) {
-        if (!observadores.contains(observador)) {
-            observadores.add(observador);
-        }
+        observadores.add(observador);
     }
 
     @Override
@@ -68,120 +49,64 @@ public class Lote implements Sujeito {
 
     @Override
     public void notificarObservadores(Lance lance) {
-        // Cópia da lista: um observador pode deixar de acompanhar durante a notificação.
-        for (ObservadorLance observador : new ArrayList<>(observadores)) {
+        for (ObservadorLance observador : observadores) {
+            // RF03: avisa todos, menos quem deu o lance
             if (observador != lance.getLicitante()) {
                 observador.atualizar(this, lance);
             }
         }
     }
 
-    // ------------------------------------------------------------------
-    // Lances (RF01 / RF02)
-    // ------------------------------------------------------------------
+    // ---------- Lances (RF02) ----------
 
-    public boolean receberLance(Licitante licitante, BigDecimal valor) {
-        String oferta = licitante.getNome() + " ofereceu " + Moeda.formatar(valor) + " no lote '" + nome + "'";
-        if (situacao != SituacaoLote.ABERTO) {
-            System.out.println("[LANCE RECUSADO] " + oferta + ": o lote ja foi encerrado e nao aceita novos lances.");
-            return false;
+    public void receberLance(Licitante licitante, double valor) {
+        if (encerrado) {
+            System.out.println("[RECUSADO] " + licitante.getNome() + " tentou dar lance no lote " + nome
+                    + ", mas ele ja foi encerrado.");
+            return;
         }
-        BigDecimal lanceAtual = getLanceAtual();
-        BigDecimal minimo = lanceAtual.multiply(FATOR_LANCE_MINIMO);
-        if (valor.compareTo(minimo) < 0) {
-            System.out.println("[LANCE RECUSADO] " + oferta + ": o lance deve ser pelo menos 5% maior que o lance atual de "
-                    + Moeda.formatar(lanceAtual) + " (minimo de " + Moeda.formatar(minimo.setScale(2, RoundingMode.CEILING)) + ").");
-            return false;
+        double minimo = lanceAtual * 1.05;
+        if (valor < minimo) {
+            System.out.println(String.format("[RECUSADO] %s ofereceu R$ %.2f no lote %s. O lance precisa ser"
+                    + " pelo menos 5%% maior que R$ %.2f (minimo R$ %.2f).",
+                    licitante.getNome(), valor, nome, lanceAtual, minimo));
+            return;
         }
-        Lance lance = new Lance(licitante, valor, LocalDateTime.now());
+        lanceAtual = valor;
+        Lance lance = new Lance(licitante, valor);
         lances.add(lance);
-        System.out.println("[LANCE ACEITO] " + oferta + ".");
+        System.out.println(String.format("[ACEITO] %s deu R$ %.2f no lote %s.", licitante.getNome(), valor, nome));
         notificarObservadores(lance);
-        return true;
     }
 
-    /** RF01: até o primeiro lance, o lance atual é o preço inicial. */
-    public BigDecimal getLanceAtual() {
-        return lances.isEmpty() ? precoInicial : getMaiorLance().getValor();
-    }
-
-    /** Como todo lance aceito supera o anterior, o maior lance é o último. Retorna null se não houver lances. */
-    public Lance getMaiorLance() {
-        return lances.isEmpty() ? null : lances.get(lances.size() - 1);
-    }
-
-    public int getTotalLances() {
-        return lances.size();
-    }
-
-    public List<Lance> getLances() {
-        return Collections.unmodifiableList(lances);
-    }
-
-    // ------------------------------------------------------------------
-    // Strategy - troca da regra de comissão (RF07)
-    // ------------------------------------------------------------------
+    // ---------- Strategy (RF07) ----------
 
     public void trocarRegraComissao(RegraComissao novaRegra) {
-        exigirAberto("trocar a regra de comissao");
-        System.out.println("[CAMPANHA] Lote '" + nome + "' (" + categoria.getNome() + "): regra de comissao trocada de '"
+        if (encerrado) {
+            System.out.println("Nao e possivel trocar a regra: o lote " + nome + " ja foi encerrado.");
+            return;
+        }
+        System.out.println("[CAMPANHA] Lote " + nome + ": regra de comissao trocada de '"
                 + regraComissao.getDescricao() + "' para '" + novaRegra.getDescricao() + "'.");
-        this.regraComissao = novaRegra;
+        regraComissao = novaRegra;
     }
 
-    // ------------------------------------------------------------------
-    // Encerramento (RF05)
-    // ------------------------------------------------------------------
+    // ---------- Encerramento (RF05) ----------
 
     public void encerrar() {
-        exigirAberto("encerrar");
-        Lance maior = getMaiorLance();
-        if (maior != null && maior.getValor().compareTo(precoReserva) >= 0) {
-            situacao = SituacaoLote.VENDIDO;
-            // RF07: a comissão é calculada pela regra vigente no momento do encerramento.
-            comissaoCobrada = regraComissao.calcular(maior.getValor());
-            System.out.println("[ENCERRADO] Lote '" + nome + "' VENDIDO para " + maior.getLicitante().getNome()
-                    + " por " + Moeda.formatar(maior.getValor()) + " (reserva de " + Moeda.formatar(precoReserva) + ").");
+        encerrado = true;
+        if (!lances.isEmpty() && lanceAtual >= precoReserva) {
+            vendido = true;
+            comissao = regraComissao.calcular(lanceAtual); // regra vigente no encerramento
+            System.out.println(String.format("[ENCERRADO] Lote %s VENDIDO para %s por R$ %.2f.",
+                    nome, getComprador().getNome(), lanceAtual));
         } else {
-            situacao = SituacaoLote.NAO_VENDIDO;
-            String motivo = maior == null
-                    ? "nenhum lance recebido"
-                    : "maior lance de " + Moeda.formatar(maior.getValor())
-                            + ", abaixo da reserva de " + Moeda.formatar(precoReserva);
-            System.out.println("[ENCERRADO] Lote '" + nome + "' NAO VENDIDO: " + motivo + ".");
+            System.out.println(String.format("[ENCERRADO] Lote %s NAO VENDIDO (maior lance R$ %.2f, reserva R$ %.2f).",
+                    nome, lanceAtual, precoReserva));
         }
     }
 
-    public Licitante getComprador() {
-        exigirVendido();
-        return getMaiorLance().getLicitante();
-    }
-
-    public BigDecimal getValorVenda() {
-        exigirVendido();
-        return getMaiorLance().getValor();
-    }
-
-    public BigDecimal getComissaoCobrada() {
-        exigirVendido();
-        return comissaoCobrada;
-    }
-
-    private void exigirAberto(String operacao) {
-        if (situacao != SituacaoLote.ABERTO) {
-            throw new IllegalStateException("Nao e possivel " + operacao + ": o lote '" + nome + "' ja foi encerrado");
-        }
-    }
-
-    private void exigirVendido() {
-        if (situacao != SituacaoLote.VENDIDO) {
-            throw new IllegalStateException("O lote '" + nome + "' nao foi vendido");
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Consultas
-    // ------------------------------------------------------------------
+    // ---------- Getters ----------
 
     public String getNome() {
         return nome;
@@ -191,19 +116,40 @@ public class Lote implements Sujeito {
         return categoria;
     }
 
-    public BigDecimal getPrecoInicial() {
+    public double getPrecoInicial() {
         return precoInicial;
     }
 
-    public BigDecimal getPrecoReserva() {
-        return precoReserva;
+    public double getLanceAtual() {
+        return lanceAtual;
+    }
+
+    public int getTotalLances() {
+        return lances.size();
+    }
+
+    // O último lance aceito é sempre o maior
+    public Lance getMaiorLance() {
+        return lances.get(lances.size() - 1);
+    }
+
+    public Licitante getComprador() {
+        return getMaiorLance().getLicitante();
+    }
+
+    public boolean isVendido() {
+        return vendido;
+    }
+
+    public double getValorVenda() {
+        return lanceAtual;
+    }
+
+    public double getComissao() {
+        return comissao;
     }
 
     public RegraComissao getRegraComissao() {
         return regraComissao;
-    }
-
-    public SituacaoLote getSituacao() {
-        return situacao;
     }
 }
